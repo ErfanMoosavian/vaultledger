@@ -1,0 +1,191 @@
+<div class="w-full max-w-6xl mx-auto pb-12">
+  <%= render "shared/header" %>
+
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="<%= glass_card('p-5 hover:border-sky-400/30 transition') %>">
+      <div class="text-xs font-medium text-slate-400 mb-2"><%= t("kpi.treasury") %></div>
+      <div class="text-2xl font-bold text-white"><%= money_display(currency_summary(@accounts, "asset")) %></div>
+    </div>
+
+    <div class="<%= glass_card('p-5 hover:border-indigo-400/30 transition') %>">
+      <div class="text-xs font-medium text-slate-400 mb-2"><%= t("kpi.liabilities") %></div>
+      <div class="text-2xl font-bold text-indigo-300"><%= money_display(currency_summary(@accounts, "liability")) %></div>
+    </div>
+
+    <div class="<%= glass_card('p-5 hover:border-emerald-400/30 transition') %>">
+      <div class="text-xs font-medium text-slate-400 mb-2"><%= t("kpi.revenue") %></div>
+      <div class="text-2xl font-bold text-emerald-300"><%= money_display(currency_summary(@accounts, "revenue")) %></div>
+    </div>
+
+    <div class="rounded-2xl p-5 bg-gradient-to-br from-emerald-500/20 via-teal-500/10 to-indigo-500/20 backdrop-blur-xl border border-emerald-400/25 shadow-2xl shadow-black/30">
+      <div class="text-xs font-medium text-emerald-200/80 mb-2"><%= t("kpi.transactions") %></div>
+      <div class="text-2xl font-bold font-mono text-white"><%= @audit_report.checked_transactions %></div>
+      <div class="text-xs text-emerald-300 mt-1"><%= t("kpi.accounts_verified", count: @audit_report.checked_accounts) %></div>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <div class="<%= glass_card('p-6') %>">
+      <h2 class="text-sm font-bold text-white mb-4"><%= t("forms.open_account") %></h2>
+      <%= form_with model: @new_account, url: accounts_path, class: "space-y-3.5" do |f| %>
+        <div>
+          <%= f.label :name, t("forms.account_name"), class: "block text-xs font-medium text-slate-400 mb-1.5" %>
+          <%= f.text_field :name, placeholder: t("forms.account_name_placeholder"), required: true, class: glass_input_class %>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <%= f.label :account_type, t("forms.ledger_type"), class: "block text-xs font-medium text-slate-400 mb-1.5" %>
+            <%= f.select :account_type, localized_account_type_options, { selected: "liability" }, class: glass_select_class %>
+          </div>
+          <div>
+            <%= f.label :currency, t("forms.currency"), class: "block text-xs font-medium text-slate-400 mb-1.5" %>
+            <%= f.select :currency, Account::SUPPORTED_CURRENCIES, {}, class: glass_select_class %>
+          </div>
+        </div>
+        <%= f.submit t("forms.create_account"), class: "w-full bg-white/15 hover:bg-white/25 border border-white/15 text-white text-sm font-semibold py-2.5 rounded-xl cursor-pointer transition" %>
+      <% end %>
+    </div>
+
+    <div class="<%= glass_card('p-6') %>">
+      <h2 class="text-sm font-bold text-white mb-4"><%= t("forms.deposit_title") %></h2>
+      <%= form_with url: deposits_path, method: :post, class: "space-y-3.5" do %>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5"><%= t("forms.treasury_account") %></label>
+          <%= select_tag :treasury_account_id, options_from_collection_for_select(@treasury_accounts, :id, :name), class: glass_select_class %>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5"><%= t("forms.destination_wallet") %></label>
+          <%= select_tag :wallet_account_id, options_from_collection_for_select(@wallet_accounts, :id, :name), class: glass_select_class %>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5"><%= t("forms.amount_label") %></label>
+          <%= text_field_tag :amount, "100.00", required: true, dir: "ltr", class: "#{glass_input_class} font-mono" %>
+        </div>
+        <%= submit_tag t("forms.post_deposit"), class: "w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-sm font-bold py-2.5 rounded-xl cursor-pointer shadow-lg shadow-emerald-500/20 transition" %>
+      <% end %>
+    </div>
+
+    <div class="<%= glass_card('p-6') %>">
+      <h2 class="text-sm font-bold text-white mb-4"><%= t("forms.transfer_title") %></h2>
+      <%= form_with url: transfers_path, method: :post, class: "space-y-3.5" do %>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1.5"><%= t("forms.from_wallet") %></label>
+            <%= select_tag :from_account_id, options_from_collection_for_select(@wallet_accounts, :id, :name), class: glass_select_class %>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1.5"><%= t("forms.to_wallet") %></label>
+            <%= select_tag :to_account_id, options_from_collection_for_select(@wallet_accounts, :id, :name, @wallet_accounts.second&.id), class: glass_select_class %>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1.5"><%= t("forms.gross_amount") %></label>
+            <%= text_field_tag :amount, "25.00", required: true, dir: "ltr", class: "#{glass_input_class} font-mono" %>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1.5"><%= t("forms.platform_fee") %></label>
+            <%= text_field_tag :fee_amount, "1.00", dir: "ltr", class: "#{glass_input_class} font-mono" %>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5"><%= t("forms.fee_account") %></label>
+          <%= select_tag :fee_account_id, options_from_collection_for_select(@revenue_accounts, :id, :name, @revenue_accounts.first&.id), include_blank: t("forms.no_fee_account"), class: glass_select_class %>
+        </div>
+        <%= submit_tag t("forms.execute_transfer"), class: "w-full bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-400 hover:to-violet-400 text-white text-sm font-bold py-2.5 rounded-xl cursor-pointer shadow-lg shadow-indigo-500/20 transition" %>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="<%= glass_card('overflow-hidden mb-8') %>">
+    <div class="px-6 py-4 border-b border-white/10 flex flex-wrap justify-between items-center gap-2">
+      <div>
+        <h2 class="font-bold text-white"><%= t("tables.chart_title") %></h2>
+        <p class="text-xs text-slate-400"><%= t("tables.chart_hint") %></p>
+      </div>
+      <div class="flex items-center gap-4 text-xs bg-slate-950/60 border border-white/10 px-4 py-2 rounded-xl">
+        <span class="text-slate-400"><%= t("tables.trial_balance") %>:</span>
+        <span class="text-rose-300"><%= t("tables.total_debits") %>: <%= money_display(MoneyAmount.new(@trial_balance.total_debit_cents, "USD")) %></span>
+        <span class="text-emerald-300"><%= t("tables.total_credits") %>: <%= money_display(MoneyAmount.new(@trial_balance.total_credit_cents, "USD")) %></span>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-start text-sm">
+        <thead class="bg-white/5 text-slate-400 border-b border-white/10 text-xs">
+          <tr>
+            <th class="px-6 py-3.5 text-start"><%= t("tables.account_no") %></th>
+            <th class="px-6 py-3.5 text-start"><%= t("tables.name") %></th>
+            <th class="px-6 py-3.5 text-start"><%= t("tables.type") %></th>
+            <th class="px-6 py-3.5 text-start"><%= t("tables.normal_side") %></th>
+            <th class="px-6 py-3.5 text-end"><%= t("tables.balance") %></th>
+            <th class="px-6 py-3.5 text-end"><%= t("tables.actions") %></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/10">
+          <% @accounts.each do |account| %>
+            <tr class="hover:bg-white/5 transition">
+              <td class="px-6 py-3.5 font-mono text-xs" dir="ltr">
+                <%= link_to account.account_number, account_path(account), class: "text-emerald-300 hover:underline font-semibold" %>
+              </td>
+              <td class="px-6 py-3.5 font-medium text-white">
+                <%= link_to account.name, account_path(account), class: "hover:text-emerald-300 transition" %>
+              </td>
+              <td class="px-6 py-3.5"><%= account_type_badge(account) %></td>
+              <td class="px-6 py-3.5 text-xs text-slate-400"><%= t("sides.#{account.debit_normal? ? 'debit' : 'credit'}") %></td>
+              <td class="px-6 py-3.5 text-end font-bold text-white"><%= money_display(account.balance) %></td>
+              <td class="px-6 py-3.5 text-end whitespace-nowrap">
+                <div class="inline-flex items-center gap-2">
+                  <%= link_to t("tables.view_statement"), account_path(account), class: "text-xs font-semibold bg-indigo-500/20 hover:bg-indigo-500/35 border border-indigo-400/30 text-indigo-200 px-3 py-1 rounded-lg transition" %>
+                  <%= link_to t("tables.export_csv"), export_account_path(account), class: "text-xs bg-white/10 hover:bg-white/20 text-slate-200 px-2.5 py-1 rounded-lg transition" %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="<%= glass_card('overflow-hidden') %>">
+    <div class="px-6 py-4 border-b border-white/10 flex flex-wrap justify-between items-center gap-2">
+      <h2 class="font-bold text-white"><%= t("tables.journal_title") %></h2>
+      <span class="text-xs text-slate-400"><%= t("tables.journal_hint") %></span>
+    </div>
+    <div class="divide-y divide-white/10">
+      <% @transactions.each do |txn| %>
+        <div class="p-6 hover:bg-white/[0.03] transition">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <div class="flex flex-wrap items-center gap-2.5">
+              <span dir="ltr" class="font-mono text-xs font-bold bg-white/10 text-emerald-300 px-2.5 py-1 rounded-lg border border-white/10"><%= txn.reference %></span>
+              <span class="font-semibold text-white text-sm"><%= txn.description %></span>
+              <% if txn.reversed? %>
+                <span class="text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-400/30 px-2.5 py-0.5 rounded-full"><%= t("tables.reversed") %></span>
+              <% elsif txn.reversal? %>
+                <span class="text-xs font-semibold bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-400/30 px-2.5 py-0.5 rounded-full"><%= t("tables.reversal_entry") %></span>
+              <% end %>
+            </div>
+            <div class="flex items-center gap-3">
+              <span dir="ltr" class="text-xs text-slate-400 font-mono"><%= txn.created_at.strftime("%Y-%m-%d %H:%M:%S UTC") %></span>
+              <% unless txn.reversed? || txn.reversal? %>
+                <%= button_to t("tables.reverse_btn"), reverse_transaction_path(txn), method: :post,
+                    form: { onsubmit: "return confirm('#{j t('tables.confirm_reverse', ref: txn.reference)}')" },
+                    class: "text-xs font-semibold text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/30 px-3 py-1 rounded-lg cursor-pointer transition" %>
+              <% end %>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            <% txn.ledger_entries.sort_by(&:id).each do |entry| %>
+              <div class="flex items-center justify-between rounded-xl border border-white/10 bg-slate-950/60 px-3.5 py-2.5 text-xs">
+                <div class="flex items-center gap-2 min-w-0">
+                  <%= entry_side_badge(entry.entry_type, short: true) %>
+                  <span class="truncate text-slate-200 font-medium"><%= entry.account.name %></span>
+                </div>
+                <%= money_display(entry.amount, extra_class: "font-semibold text-white ms-2") %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </section>
+</div>
